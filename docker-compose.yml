@@ -1,34 +1,54 @@
-apache:
-  image: eeacms/apache:2.4
-  restart: always
-  ports:
-  - "80:80"
-  volumes_from:
-  - data
-  links:
-  - varnish
-
-varnish:
-  image: eeacms/varnish:3
-  restart: always
-  volumes_from:
-  - data
-
 memcached:
-  image: eeacms/memcached
   restart: always
+  tty: true
+  image: eeacms/memcached
+  stdin_open: true
+varnish:
   ports:
-    - "11211:11211"
+  - 8888:80/tcp
+  restart: always
   environment:
-    - MEMCACHED_MEMORY=2048
-    - MEMCACHED_PORT=11211
-
-data:
-  image: busybox
+    BACKENDS: loadbalancer:80
+  labels:
+    io.rancher.scheduler.affinity:host_label: type=frontend
+  tty: true
+  image: eeacms/varnish
+  links:
+  - loadbalancer:loadbalancer
   volumes:
-  - /var/local/www-logs/eea
-  - /var/www-static-resources:/var/www-static-resources
-  - /var/eea-buildout-plone4:/var/eea-buildout-plone4
-  - /var/eea-buildout-plone4/etc/apache/vh-www-staging.conf:/etc/httpd/conf.d/vh-www-staging.conf
-  - /var/eea-buildout-plone4/etc/varnish/default-staging.vcl:/etc/varnish/conf.d/staging.vcl
-  command: chown -R 1000:1000 /var/local/www-logs/eea
+  - /etc/varnish
+  stdin_open: true
+loadbalancer:
+  restart: always
+  expose:
+  - 80:80
+  labels:
+    io.rancher.scheduler.affinity:host_label: type=frontend
+  tty: true
+  image: rancher/load-balancer-service
+  links:
+  - Plone:Plone
+  stdin_open: true
+postgres:
+  restart: always
+  environment:
+    POSTGRES_DBNAME: datafs zasync
+    POSTGRES_DBUSER: zope
+    POSTGRES_DBPASS: zope
+  labels:
+    io.rancher.scheduler.affinity:host_label: type=db
+  tty: true
+  image: eeacms/postgres:9.4
+  volumes:
+  - /var/lib/postgresql/data
+  stdin_open: true
+Plone:
+  restart: always
+  labels:
+    io.rancher.scheduler.affinity:host_label: type=backend
+  tty: true
+  image: eeacms/plone-eea-www
+  links:
+  - memcached:memcached
+  - postgres:postgres
+  stdin_open: true

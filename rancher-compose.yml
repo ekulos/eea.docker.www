@@ -1,0 +1,11 @@
+memcached:
+  scale: 1
+varnish:
+  scale: 1
+loadbalancer:
+  scale: 1
+  load_balancer_config: {}
+postgres:
+  scale: 1
+Plone:
+  scale: 4
