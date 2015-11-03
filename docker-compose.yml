@@ -1,16 +1,29 @@
 memcached:
   restart: always
-  tty: true
-  image: eeacms/memcached
-  stdin_open: true
+  environment:
+    MEMCACHED_MEMORY: '2048'
+  labels:
+    io.rancher.scheduler.affinity:host_label: www-type=www-frontend
+  image: eeacms/memcached:1.4
+  volumes:
+  - /etc/localtime:/etc/localtime:ro
+
+postfix:
+  restart: always
+  environment:
+    MTP_HOST: eea.europa.eu
+  labels:
+    io.rancher.service.hash: 77d19dd972fdc7b460c710d2ab687ea1438dc76e
+  image: eeacms/postfix
+  volumes:
+  - /etc/localtime:/etc/localtime:ro
+
 varnish:
   ports:
   - 8888:80/tcp
   restart: always
   environment:
     BACKENDS: loadbalancer:80
-  labels:
-    io.rancher.scheduler.affinity:host_label: type=frontend
   tty: true
   image: eeacms/varnish
   links:
@@ -18,37 +31,91 @@ varnish:
   volumes:
   - /etc/varnish
   stdin_open: true
+
+ploneadmin:
+  restart: always
+  labels:
+  tty: true
+  image: eeacms/plone-eea-common-relstorage:5.3
+  links:
+  - memcached:memcached
+  - postfix:postfix
+  - postgres:postgres
+  stdin_open: true
+  labels:
+    io.rancher.scheduler.affinity:host_label: www-type=www-plone
+ 
+postgres1:
+  restart: always
+  environment:
+    POSTGRES_DBNAME: datafs zasync
+    POSTGRES_DBPASS: zope
+    POSTGRES_DBUSER: zope
+  labels:
+    io.rancher.sidekicks: data
+    io.rancher.scheduler.affinity:host_label: www-type=www-db
+  tty: true
+  image: eeacms/postgres:9.4
+  volumes:
+  - /etc/localtime:/etc/localtime:ro
+  volumes_from:
+  - data
+  stdin_open: true
+
+data:
+  restart: always
+  command:
+  - cat
+  tty: true
+  image: busybox
+  volumes:
+  - /var/lib/postgresql/data
+  stdin_open: true
+  user: '999'
+
 loadbalancer:
   restart: always
   expose:
   - 80:80
   labels:
-    io.rancher.scheduler.affinity:host_label: type=frontend
+    io.rancher.loadbalancer.target.ploneadmin: /admin
+    io.rancher.scheduler.affinity:host_label: www-type=www-lb
   tty: true
   image: rancher/load-balancer-service
   links:
-  - Plone:Plone
+  - plone:plone
+  - ploneadmin:ploneadmin
   stdin_open: true
-postgres:
-  restart: always
-  environment:
-    POSTGRES_DBNAME: datafs zasync
-    POSTGRES_DBUSER: zope
-    POSTGRES_DBPASS: zope
-  labels:
-    io.rancher.scheduler.affinity:host_label: type=db
-  tty: true
-  image: eeacms/postgres:9.4
-  volumes:
-  - /var/lib/postgresql/data
-  stdin_open: true
-Plone:
+
+plone:
   restart: always
   labels:
-    io.rancher.scheduler.affinity:host_label: type=backend
-  tty: true
+    io.rancher.scheduler.affinity:host_label: www-type=www-plone
   image: eeacms/plone-eea-www
   links:
   - memcached:memcached
+  - postfix:postfix
   - postgres:postgres
-  stdin_open: true
+  volumes:
+  - /etc/localtime:/etc/localtime:ro
+
+postgres:
+  image: rancher/dns-service
+  links:
+  - postgres1:postgres1
+
+ploneasync:
+  restart: always
+  environment:
+    BUILDOUT_REBUILD: 'true'
+    PLONE_APP_ASYNC: single_db_worker
+  image: eeacms/plone-eea-www
+  labels:
+    io.rancher.scheduler.affinity:host_label: www-type=www-plone
+  links:
+  - memcached:memcached
+  - postfix:postfix
+  - postgres:postgres
+  volumes:
+  - /etc/localtime:/etc/localtime:ro
+
