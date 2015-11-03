@@ -13,6 +13,8 @@ Docker orchestration for EEA main portal services
 
 ### Usage
 
+Make sure you have the appropriate labels on the docker hosts in your Rancher cluster (see docker-compose.yml).
+
 Go to your Rancher Web interface and generate your API key (API & Keys for "..." Environment):
 
     $ export RANCHER_URL=<(Endpoint URL)>

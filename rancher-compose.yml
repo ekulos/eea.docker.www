@@ -23,7 +23,6 @@ postgres1:
     healthy_threshold: 2
 data:
   scale: 1
-  metadata: *id001
 loadbalancer:
   scale: 1
   load_balancer_config:
