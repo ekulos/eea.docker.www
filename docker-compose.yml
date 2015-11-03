@@ -12,8 +12,6 @@ postfix:
   restart: always
   environment:
     MTP_HOST: eea.europa.eu
-  labels:
-    io.rancher.service.hash: 77d19dd972fdc7b460c710d2ab687ea1438dc76e
   image: eeacms/postfix
   volumes:
   - /etc/localtime:/etc/localtime:ro
@@ -36,7 +34,7 @@ ploneadmin:
   restart: always
   labels:
   tty: true
-  image: eeacms/plone-eea-common-relstorage:5.3
+  image: eeacms/plone-eea-www
   links:
   - memcached:memcached
   - postfix:postfix
