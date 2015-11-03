@@ -2,30 +2,26 @@
 
 Docker orchestration for EEA main portal services
 
-
 ### Installation
 
 1. Install [Docker](https://www.docker.com/).
 
 2. Install [Docker Compose](https://docs.docker.com/compose/).
 
+3. Install [Rancher Compose](https://github.com/rancher/rancher-compose)
+
 
 ### Usage
 
+Go to your Rancher Web interface and generate your API key (API & Keys for "..." Environment):
+
+    $ export RANCHER_URL=<(Endpoint URL)>
+    $ export RANCHER_ACCESS_KEY=<(ACCESS KEY)>
+    $ export RANCHER_SECRET_KEY=<(SECRET KEY)>
+
     $ git clone https://github.com/eea/eea.docker.www.git
     $ cd eea.docker.www
-    $ docker-compose up -d
-    $ docker-compose logs
-
-
-### Upgrade
-
-    $ sudo docker-compose stop
-    $ sudo docker-compose rm -v
-    $ sudo docker-compose pull
-    $ sudo docker-compose up -d
-    $ sudo docker-compose logs
-
+    $ rancher-compose up
 
 ## Copyright and license
 
