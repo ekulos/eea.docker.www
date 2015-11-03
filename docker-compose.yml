@@ -3,7 +3,7 @@ memcached:
   environment:
     MEMCACHED_MEMORY: '2048'
   labels:
-    io.rancher.scheduler.affinity:host_label: www-type=www-frontend
+    io.rancher.scheduler.affinity:host_label: www-frontend=yes
   image: eeacms/memcached:1.4
   volumes:
   - /etc/localtime:/etc/localtime:ro
@@ -41,7 +41,7 @@ ploneadmin:
   - postgres:postgres
   stdin_open: true
   labels:
-    io.rancher.scheduler.affinity:host_label: www-type=www-plone
+    io.rancher.scheduler.affinity:host_label: www-plone=yes
  
 postgres1:
   restart: always
@@ -51,7 +51,7 @@ postgres1:
     POSTGRES_DBUSER: zope
   labels:
     io.rancher.sidekicks: data
-    io.rancher.scheduler.affinity:host_label: www-type=www-db
+    io.rancher.scheduler.affinity:host_label: www-db=yes
   tty: true
   image: eeacms/postgres:9.4
   volumes:
@@ -77,7 +77,7 @@ loadbalancer:
   - 80:80
   labels:
     io.rancher.loadbalancer.target.ploneadmin: /admin
-    io.rancher.scheduler.affinity:host_label: www-type=www-lb
+    io.rancher.scheduler.affinity:host_label: www-lb=yes
   tty: true
   image: rancher/load-balancer-service
   links:
@@ -88,7 +88,7 @@ loadbalancer:
 plone:
   restart: always
   labels:
-    io.rancher.scheduler.affinity:host_label: www-type=www-plone
+    io.rancher.scheduler.affinity:host_label: www-plone=yes
   image: eeacms/plone-eea-www
   links:
   - memcached:memcached
@@ -109,7 +109,7 @@ ploneasync:
     PLONE_APP_ASYNC: single_db_worker
   image: eeacms/plone-eea-www
   labels:
-    io.rancher.scheduler.affinity:host_label: www-type=www-plone
+    io.rancher.scheduler.affinity:host_label: www-plone=yes
   links:
   - memcached:memcached
   - postfix:postfix
