@@ -1,27 +1,8 @@
+varnish:
+  scale: 1
 memcached:
   scale: 1
 postfix:
-  scale: 1
-varnish:
-  scale: 1
-ploneadmin:
-  scale: 1
-  health_check:
-    port: 80
-    interval: 5000
-    unhealthy_threshold: 3
-    response_timeout: 5000
-    request_line: GET / HTTP/1.0
-    healthy_threshold: 2
-postgres1:
-  scale: 1
-  health_check:
-    port: 5432
-    interval: 5000
-    unhealthy_threshold: 3
-    response_timeout: 5000
-    healthy_threshold: 2
-data:
   scale: 1
 loadbalancer:
   scale: 1
@@ -43,3 +24,20 @@ plone:
     healthy_threshold: 2
 ploneasync:
   scale: 2
+ploneadmin:
+  scale: 1
+  health_check:
+    port: 80
+    interval: 5000
+    unhealthy_threshold: 3
+    response_timeout: 5000
+    request_line: GET / HTTP/1.0
+    healthy_threshold: 2
+postgres1:
+  scale: 1
+  health_check:
+    port: 5432
+    interval: 5000
+    unhealthy_threshold: 3
+    response_timeout: 5000
+    healthy_threshold: 2

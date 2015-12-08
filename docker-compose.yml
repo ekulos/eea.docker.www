@@ -1,24 +1,9 @@
-memcached:
-  restart: always
-  environment:
-    MEMCACHED_MEMORY: '2048'
-  labels:
-    io.rancher.scheduler.affinity:host_label: www-frontend=yes
-  image: eeacms/memcached:1.4
-  volumes:
-  - /etc/localtime:/etc/localtime:ro
-
-postfix:
-  restart: always
-  environment:
-    MTP_HOST: eea.europa.eu
-  image: eeacms/postfix
-  volumes:
-  - /etc/localtime:/etc/localtime:ro
-
+#
+# Cache
+#
 varnish:
   ports:
-  - 8888:80/tcp
+  - 7988:80/tcp
   restart: always
   environment:
     BACKENDS: loadbalancer:80
@@ -29,48 +14,35 @@ varnish:
   volumes:
   - /etc/varnish
   stdin_open: true
+  labels:
+    io.rancher.scheduler.affinity:host_label: www-frontend=yes
 
-ploneadmin:
-  restart: always
-  labels:
-  tty: true
-  image: eeacms/plone-eea-www
-  links:
-  - memcached:memcached
-  - postfix:postfix
-  - postgres:postgres
-  stdin_open: true
-  labels:
-    io.rancher.scheduler.affinity:host_label: www-plone=yes
- 
-postgres1:
+memcached:
   restart: always
   environment:
-    POSTGRES_DBNAME: datafs zasync
-    POSTGRES_DBPASS: zope
-    POSTGRES_DBUSER: zope
+    MEMCACHED_MEMORY: '2048'
   labels:
-    io.rancher.sidekicks: data
-    io.rancher.scheduler.affinity:host_label: www-db=yes
-  tty: true
-  image: eeacms/postgres:9.4
+    io.rancher.scheduler.affinity:host_label: www-frontend=yes
+  image: eeacms/memcached:1.4
   volumes:
   - /etc/localtime:/etc/localtime:ro
-  volumes_from:
-  - data
-  stdin_open: true
 
-data:
+#
+# Mail
+#
+postfix:
   restart: always
-  command:
-  - cat
-  tty: true
-  image: busybox
+  labels:
+    io.rancher.scheduler.affinity:host_label: www-frontend=yes
+  environment:
+    MTP_HOST: eea.europa.eu
+  image: eeacms/postfix
   volumes:
-  - /var/lib/postgresql/data
-  stdin_open: true
-  user: '999'
+  - /etc/localtime:/etc/localtime:ro
 
+#
+# LB
+#
 loadbalancer:
   restart: always
   expose:
@@ -85,10 +57,14 @@ loadbalancer:
   - ploneadmin:ploneadmin
   stdin_open: true
 
+#
+# Web App
+#
 plone:
   restart: always
   labels:
     io.rancher.scheduler.affinity:host_label: www-plone=yes
+    io.rancher.sidekicks: plone_data
   image: eeacms/plone-eea-www
   links:
   - memcached:memcached
@@ -96,11 +72,21 @@ plone:
   - postgres:postgres
   volumes:
   - /etc/localtime:/etc/localtime:ro
+  volumes_from:
+  - plone_data
 
-postgres:
-  image: rancher/dns-service
-  links:
-  - postgres1:postgres1
+plone_data:
+  restart: always
+  command: sh -c "chown -v -R 500:500 /data >> /data/chown.log && exec tail -f /data/chown.log"
+  tty: true
+  image: busybox
+  volumes:
+  - /data/blobs
+  - /data/www-static-resources
+  - /data/downloads/pdf
+  - /data/downloads/tmp
+  - /data/eea.controlpanel
+  stdin_open: true
 
 ploneasync:
   restart: always
@@ -109,6 +95,7 @@ ploneasync:
     PLONE_APP_ASYNC: single_db_worker
   image: eeacms/plone-eea-www
   labels:
+    io.rancher.sidekicks: ploneasync_data
     io.rancher.scheduler.affinity:host_label: www-plone=yes
   links:
   - memcached:memcached
@@ -116,4 +103,81 @@ ploneasync:
   - postgres:postgres
   volumes:
   - /etc/localtime:/etc/localtime:ro
+  volumes_from:
+  - ploneasync_data
 
+ploneasync_data:
+  restart: always
+  command: sh -c "chown -v -R 500:500 /data >> /data/chown.log && exec tail -f /data/chown.log"
+  tty: true
+  image: busybox
+  volumes:
+  - /data/blobs
+  - /data/www-static-resources
+  - /data/downloads/pdf
+  - /data/downloads/tmp
+  - /data/eea.controlpanel
+  stdin_open: true
+
+ploneadmin:
+  restart: always
+  labels:
+    io.rancher.sidekicks: ploneadmin_data
+    io.rancher.scheduler.affinity:host_label: www-plone=yes
+  tty: true
+  image: eeacms/plone-eea-www
+  links:
+  - memcached:memcached
+  - postfix:postfix
+  - postgres:postgres
+  stdin_open: true
+  volumes_from:
+  - ploneadmin_data
+
+ploneadmin_data:
+  restart: always
+  command: sh -c "chown -v -R 500:500 /data >> /data/chown.log && exec tail -f /data/chown.log"
+  tty: true
+  image: busybox
+  volumes:
+  - /data/blobs
+  - /data/www-static-resources
+  - /data/downloads/pdf
+  - /data/downloads/tmp
+  - /data/eea.controlpanel
+  stdin_open: true
+
+#
+# DB
+#
+postgres:
+  image: rancher/dns-service
+  links:
+  - postgres1:postgres1
+
+postgres1:
+  restart: always
+  environment:
+    POSTGRES_DBNAME: datafs zasync
+    POSTGRES_DBPASS: zope
+    POSTGRES_DBUSER: zope
+  labels:
+    io.rancher.sidekicks: postgres_data
+    io.rancher.scheduler.affinity:host_label: www-db=yes
+  tty: true
+  image: eeacms/postgres:9.4
+  volumes:
+  - /etc/localtime:/etc/localtime:ro
+  volumes_from:
+  - postgres_data
+  stdin_open: true
+
+postgres_data:
+  restart: always
+  command: sh -c "chown -v -R 999:999 /var/lib/postgresql/data >> /data/chown.log && exec tail -f /data/chown.log"
+  tty: true
+  image: busybox
+  volumes:
+  - /var/lib/postgresql/data
+  - /data
+  stdin_open: true
