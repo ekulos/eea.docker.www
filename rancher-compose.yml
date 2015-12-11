@@ -2,6 +2,8 @@ varnish:
   scale: 1
 memcached:
   scale: 1
+relcached:
+  scale: 1
 postfix:
   scale: 1
 loadbalancer:
@@ -24,8 +26,6 @@ plone:
     healthy_threshold: 2
 ploneasync:
   scale: 2
-ploneadmin:
-  scale: 1
   health_check:
     port: 80
     interval: 5000

@@ -27,6 +27,16 @@ memcached:
   volumes:
   - /etc/localtime:/etc/localtime:ro
 
+relcached:
+  restart: always
+  environment:
+    MEMCACHED_MEMORY: '2048'
+  labels:
+    io.rancher.scheduler.affinity:host_label: www-frontend=yes
+  image: eeacms/memcached:1.4
+  volumes:
+  - /etc/localtime:/etc/localtime:ro
+
 #
 # Mail
 #
@@ -48,13 +58,11 @@ loadbalancer:
   expose:
   - 80:80
   labels:
-    io.rancher.loadbalancer.target.ploneadmin: /admin
     io.rancher.scheduler.affinity:host_label: www-lb=yes
   tty: true
   image: rancher/load-balancer-service
   links:
   - plone:plone
-  - ploneadmin:ploneadmin
   stdin_open: true
 
 #
@@ -64,10 +72,12 @@ plone:
   restart: always
   labels:
     io.rancher.scheduler.affinity:host_label: www-plone=yes
+    io.rancher.scheduler.affinity:host_label: docker-volume-netshare=yes
     io.rancher.sidekicks: plone_data
   image: eeacms/plone-eea-www
   links:
   - memcached:memcached
+  - relcached:relcached
   - postfix:postfix
   - postgres:postgres
   volumes:
@@ -81,11 +91,11 @@ plone_data:
   tty: true
   image: busybox
   volumes:
-  - /data/blobs
-  - /data/www-static-resources
-  - /data/downloads/pdf
-  - /data/downloads/tmp
-  - /data/eea.controlpanel
+  - 10.142.71.23/mnt/vdb1/sharedblobstorage/blobs:/data/blobs
+  - 10.142.71.23/mnt/vdb1/sharedblobstorage/downloads:/data/downloads
+  - 10.142.71.23/mnt/vdb1/sharedblobstorage/www-static-resources:/data/www-static-resources
+  - 10.142.71.23/mnt/vdb1/sharedblobstorage/eea.controlpanel:/data/eea.controlpanel
+  volume_driver: nfs
   stdin_open: true
 
 ploneasync:
@@ -97,8 +107,10 @@ ploneasync:
   labels:
     io.rancher.sidekicks: ploneasync_data
     io.rancher.scheduler.affinity:host_label: www-plone=yes
+    io.rancher.scheduler.affinity:host_label: docker-volume-netshare=yes
   links:
   - memcached:memcached
+  - relcached:relcached
   - postfix:postfix
   - postgres:postgres
   volumes:
@@ -112,39 +124,11 @@ ploneasync_data:
   tty: true
   image: busybox
   volumes:
-  - /data/blobs
-  - /data/www-static-resources
-  - /data/downloads/pdf
-  - /data/downloads/tmp
-  - /data/eea.controlpanel
-  stdin_open: true
-
-ploneadmin:
-  restart: always
-  labels:
-    io.rancher.sidekicks: ploneadmin_data
-    io.rancher.scheduler.affinity:host_label: www-plone=yes
-  tty: true
-  image: eeacms/plone-eea-www
-  links:
-  - memcached:memcached
-  - postfix:postfix
-  - postgres:postgres
-  stdin_open: true
-  volumes_from:
-  - ploneadmin_data
-
-ploneadmin_data:
-  restart: always
-  command: sh -c "chown -v -R 500:500 /data >> /data/chown.log && exec tail -f /data/chown.log"
-  tty: true
-  image: busybox
-  volumes:
-  - /data/blobs
-  - /data/www-static-resources
-  - /data/downloads/pdf
-  - /data/downloads/tmp
-  - /data/eea.controlpanel
+  - 10.142.71.23/mnt/vdb1/sharedblobstorage/blobs:/data/blobs
+  - 10.142.71.23/mnt/vdb1/sharedblobstorage/downloads:/data/downloads
+  - 10.142.71.23/mnt/vdb1/sharedblobstorage/www-static-resources:/data/www-static-resources
+  - 10.142.71.23/mnt/vdb1/sharedblobstorage/eea.controlpanel:/data/eea.controlpanel
+  volume_driver: nfs
   stdin_open: true
 
 #
