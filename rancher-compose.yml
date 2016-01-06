@@ -18,7 +18,7 @@ loadbalancer:
 plone:
   scale: 2
   health_check:
-    port: 80
+    port: 8080
     interval: 5000
     unhealthy_threshold: 3
     response_timeout: 5000
@@ -27,7 +27,7 @@ plone:
 ploneasync:
   scale: 2
   health_check:
-    port: 80
+    port: 8080
     interval: 5000
     unhealthy_threshold: 3
     response_timeout: 5000
